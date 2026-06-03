@@ -1,5 +1,5 @@
 {
-  "name": "@bitazza/rate-limiter",
+  "name": "rate-limiter",
   "version": "0.0.1",
   "description": "Distributed rate-limit and request scheduling manager for third-party APIs (e.g. Binance).",
   "license": "MIT",
@@ -11,12 +11,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/bitazza/rate-limiter.git"
+    "url": "https://github.com/amirofy2002/3rd-party-rate-limiter"
   },
   "bugs": {
-    "url": "https://github.com/bitazza/rate-limiter/issues"
+    "url": "https://github.com/amirofy2002/3rd-party-rate-limiter/issues"
   },
-  "homepage": "https://github.com/bitazza/rate-limiter#readme",
+  "homepage": "https://github.com/amirofy2002/3rd-party-rate-limiter#readme",
   "keywords": [
     "rate-limit",
     "rate-limiter",
