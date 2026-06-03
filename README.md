@@ -1,4 +1,4 @@
-# @bitazza/rate-limiter
+# rate-limiter
 
 Distributed rate-limit and request scheduling manager for third-party APIs.
 
