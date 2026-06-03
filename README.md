@@ -23,11 +23,11 @@ Third-party APIs (Binance, Coinbase, etc.) ban clients that breach weight/rate l
 ## Install
 
 ```bash
-npm install @bitazza/rate-limiter
+npm install rate-limiter
 # or
-pnpm add @bitazza/rate-limiter
+pnpm add rate-limiter
 # or
-yarn add @bitazza/rate-limiter
+yarn add rate-limiter
 ```
 
 Redis mode also needs:
@@ -51,8 +51,8 @@ const limiter = createLimiter({
     windows: [{ id: '1m', windowMs: 60_000, maxWeight: 1200, algorithm: 'sliding' }],
     endpoints: {
       '/api/v3/account': { weight: 10 },
-      '/api/v3/order':   { weight: 1  },
-      '/api/v3/klines':  { weight: 2  },
+      '/api/v3/order': { weight: 1 },
+      '/api/v3/klines': { weight: 2 },
     },
   },
   adapter: new GenericAdapter(),
@@ -63,7 +63,7 @@ const limiter = createLimiter({
 
 const account = await limiter.schedule({
   endpoint: '/api/v3/account',
-  execute: () => fetch('https://api.binance.com/api/v3/account', { headers }).then(r => r.json()),
+  execute: () => fetch('https://api.binance.com/api/v3/account', { headers }).then((r) => r.json()),
 });
 ```
 
@@ -78,15 +78,15 @@ import { createLimiter, BinanceAdapter, RedisStore } from '@bitazza/rate-limiter
 import Redis from 'ioredis';
 
 const limiter = createLimiter({
-  adapter: new BinanceAdapter(),                       // knows weights + header names
+  adapter: new BinanceAdapter(), // knows weights + header names
   store: new RedisStore({
     client: new Redis(process.env.REDIS_URL!),
     keyPrefix: 'rl:binance:',
-    failMode: 'closed',                                // 'open' = allow on Redis outage
+    failMode: 'closed', // 'open' = allow on Redis outage
   }),
   defaultStrategy: 'queue',
   maxQueueSize: 10_000,
-  banCooldownMs: 180_000,                              // 3 min
+  banCooldownMs: 180_000, // 3 min
 });
 ```
 
@@ -104,7 +104,7 @@ const getBalance = limiter.wrap('/api/v3/account', async () => {
   return r.json();
 });
 
-await getBalance();   // auto-tracked, auto-scheduled
+await getBalance(); // auto-tracked, auto-scheduled
 ```
 
 ### 2. Schedule with priority + retry — critical path
@@ -112,7 +112,7 @@ await getBalance();   // auto-tracked, auto-scheduled
 ```ts
 const order = await limiter.schedule({
   endpoint: '/api/v3/order',
-  priority: 10,                                        // higher = sooner
+  priority: 10, // higher = sooner
   strategy: 'queue',
   timeoutMs: 5_000,
   retry: {
@@ -128,14 +128,16 @@ const order = await limiter.schedule({
 ### 3. Low-priority — reject when full
 
 ```ts
-await limiter.schedule({
-  endpoint: '/api/v3/klines',
-  priority: 1,
-  strategy: 'reject',
-  execute: fetchKlines,
-}).catch(err => {
-  if (err.code === 'RATE_LIMITED') metrics.skip();
-});
+await limiter
+  .schedule({
+    endpoint: '/api/v3/klines',
+    priority: 1,
+    strategy: 'reject',
+    execute: fetchKlines,
+  })
+  .catch((err) => {
+    if (err.code === 'RATE_LIMITED') metrics.skip();
+  });
 ```
 
 ### 4. Delay strategy — sleep until slot opens
@@ -143,7 +145,7 @@ await limiter.schedule({
 ```ts
 await limiter.schedule({
   endpoint: '/api/v3/depth',
-  strategy: 'delay',                                   // sleep retryAfterMs, then retry
+  strategy: 'delay', // sleep retryAfterMs, then retry
   execute: fetchDepth,
 });
 ```
@@ -157,7 +159,7 @@ const limiter = createLimiter({
     windows: [{ id: '1m', windowMs: 60_000, maxWeight: 1200 }],
     endpoints: {
       '/api/v3/klines': {
-        weight: req => (req.meta?.limit && (req.meta.limit as number) > 500 ? 5 : 1),
+        weight: (req) => (req.meta?.limit && (req.meta.limit as number) > 500 ? 5 : 1),
       },
     },
   },
@@ -168,12 +170,14 @@ const limiter = createLimiter({
 ### 6. Events / observability
 
 ```ts
-limiter.on('limit:near',     ({ usage, max, window }) => log.warn(`${usage}/${max} ${window}`));
-limiter.on('limit:exceeded', ({ endpoint, window })   => log.error(`exceeded ${endpoint} ${window}`));
-limiter.on('ban:detected',   ({ until })              => alert(`banned till ${new Date(until)}`));
-limiter.on('ban:cleared',    ()                       => log.info('ban cleared'));
-limiter.on('request:queued', ({ endpoint, depth })    => metrics.gauge('queue.depth', depth));
-limiter.on('request:retry',  ({ attempt, delayMs })   => log.info(`retry #${attempt} in ${delayMs}ms`));
+limiter.on('limit:near', ({ usage, max, window }) => log.warn(`${usage}/${max} ${window}`));
+limiter.on('limit:exceeded', ({ endpoint, window }) => log.error(`exceeded ${endpoint} ${window}`));
+limiter.on('ban:detected', ({ until }) => alert(`banned till ${new Date(until)}`));
+limiter.on('ban:cleared', () => log.info('ban cleared'));
+limiter.on('request:queued', ({ endpoint, depth }) => metrics.gauge('queue.depth', depth));
+limiter.on('request:retry', ({ attempt, delayMs }) =>
+  log.info(`retry #${attempt} in ${delayMs}ms`),
+);
 
 const s = limiter.stats();
 // { queueDepth, inflight, usage: {'1m': 47}, banUntil?: number }
@@ -183,7 +187,7 @@ const s = limiter.stats();
 
 ```ts
 process.on('SIGTERM', async () => {
-  await limiter.drain();                               // finish queued, refuse new
+  await limiter.drain(); // finish queued, refuse new
   process.exit(0);
 });
 ```
@@ -194,16 +198,18 @@ process.on('SIGTERM', async () => {
 
 ```ts
 import {
-  RateLimitError,    // strategy=reject and no capacity
-  BannedError,       // provider returned 429/418
-  QueueFullError,    // maxQueueSize hit
-  TimeoutError,      // timeoutMs elapsed in queue
+  RateLimitError, // strategy=reject and no capacity
+  BannedError, // provider returned 429/418
+  QueueFullError, // maxQueueSize hit
+  TimeoutError, // timeoutMs elapsed in queue
 } from '@bitazza/rate-limiter';
 
 try {
-  await limiter.schedule({ /* ... */ });
+  await limiter.schedule({
+    /* ... */
+  });
 } catch (e) {
-  if (e instanceof BannedError)    return retryLater(e.untilMs);
+  if (e instanceof BannedError) return retryLater(e.untilMs);
   if (e instanceof QueueFullError) return drop();
   throw e;
 }
@@ -213,14 +219,14 @@ try {
 
 ## Configuration reference (v1)
 
-| Option              | Default      | Notes                                            |
-|---------------------|--------------|--------------------------------------------------|
-| `defaultStrategy`   | `'queue'`    | `'reject' \| 'delay' \| 'queue'`                 |
-| `maxQueueSize`      | `10_000`     | Reject oldest/lowest-priority when full          |
-| `agingFactorMs`     | `1_000`      | Priority boost per second waiting (anti-starve)  |
-| `banCooldownMs`     | `180_000`    | Initial ban TTL when adapter detects 429/418     |
-| `reservationTtlMs`  | `30_000`     | Auto-refund on process crash                     |
-| `failMode` (Redis)  | `'closed'`   | `'open'` = allow on Redis outage                 |
+| Option             | Default    | Notes                                           |
+| ------------------ | ---------- | ----------------------------------------------- |
+| `defaultStrategy`  | `'queue'`  | `'reject' \| 'delay' \| 'queue'`                |
+| `maxQueueSize`     | `10_000`   | Reject oldest/lowest-priority when full         |
+| `agingFactorMs`    | `1_000`    | Priority boost per second waiting (anti-starve) |
+| `banCooldownMs`    | `180_000`  | Initial ban TTL when adapter detects 429/418    |
+| `reservationTtlMs` | `30_000`   | Auto-refund on process crash                    |
+| `failMode` (Redis) | `'closed'` | `'open'` = allow on Redis outage                |
 
 Algorithm default: **sliding window counter** (Binance-friendly, no boundary double-burst).
 
